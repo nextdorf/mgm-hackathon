@@ -211,6 +211,5 @@ __marimo__/
 # CUSTOM
 /local/
 /data/
-/.env.example
 /.vscode
 uv.lock
