@@ -11,49 +11,49 @@ from pydantic import BaseModel, Extra, Field
 
 
 class Item(BaseModel):
-    name: Optional[str] = Field(None, description='The name of the ordered item')
-    quantity: Optional[int] = Field(
-        None, description='The quantity of the item ordered'
-    )
-    price: Optional[float] = Field(None, description='The price of the item in euros')
+  name: Optional[str] = Field(None, description='The name of the ordered item')
+  quantity: Optional[int] = Field(
+    None, description='The quantity of the item ordered'
+  )
+  price: Optional[float] = Field(None, description='The price of the item in euros')
 
 
-class Model(BaseModel):
-    class Config:
-        extra = Extra.allow
+class RestaurantModel(BaseModel):
+  # class Config:
+  #   extra = Extra.allow
 
-    restaurant_name: Optional[str] = Field(
-        None, description='The name of the restaurant'
-    )
-    address: Optional[str] = Field(
-        None, description='The full address of the restaurant'
-    )
-    phone_number: Optional[str] = Field(
-        None, description='The contact phone number of the restaurant'
-    )
-    invoice_number: Optional[str] = Field(
-        None, description='The unique identifier for the invoice'
-    )
-    date: Optional[date_aliased] = Field(None, description='The date of the invoice')
-    table_number: Optional[int] = Field(
-        None, description='The table number for the order'
-    )
-    items: Optional[List[Item]] = Field(None, description='List of items ordered')
-    total_amount: Optional[float] = Field(
-        None, description='The total amount of the bill in euros'
-    )
-    net_amount: Optional[float] = Field(
-        None, description='The net amount of the bill in euros'
-    )
-    vat_amount: Optional[float] = Field(None, description='The VAT amount in euros')
-    vat_rate: Optional[float] = Field(None, description='The VAT rate as a percentage')
-    server: Optional[str] = Field(
-        None, description='The identifier of the server who attended the table'
-    )
-    tax_id: Optional[str] = Field(
-        None, description='The tax identification number of the restaurant'
-    )
-    freetext: Optional[str] = Field(
-        None,
-        description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-    )
+  restaurant_name: Optional[str] = Field(
+    None, description='The name of the restaurant'
+  )
+  address: Optional[str] = Field(
+    None, description='The full address of the restaurant'
+  )
+  phone_number: Optional[str] = Field(
+    None, description='The contact phone number of the restaurant'
+  )
+  invoice_number: Optional[str] = Field(
+    None, description='The unique identifier for the invoice'
+  )
+  date: Optional[date_aliased] = Field(None, description='The date of the invoice')
+  table_number: Optional[int] = Field(
+    None, description='The table number for the order'
+  )
+  items: Optional[List[Item]] = Field(None, description='List of items ordered')
+  total_amount: Optional[float] = Field(
+    None, description='The total amount of the bill in euros'
+  )
+  net_amount: Optional[float] = Field(
+    None, description='The net amount of the bill in euros'
+  )
+  vat_amount: Optional[float] = Field(None, description='The VAT amount in euros')
+  vat_rate: Optional[float] = Field(None, description='The VAT rate as a percentage')
+  server: Optional[str] = Field(
+    None, description='The identifier of the server who attended the table'
+  )
+  tax_id: Optional[str] = Field(
+    None, description='The tax identification number of the restaurant'
+  )
+  freetext: Optional[str] = Field(
+    None,
+    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
+  )

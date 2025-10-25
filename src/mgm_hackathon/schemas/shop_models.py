@@ -12,57 +12,57 @@ from pydantic import BaseModel, Extra, Field
 
 
 class Store(BaseModel):
-    name: Optional[str] = Field(None, description='Name of the store')
-    address: Optional[str] = Field(None, description='Address of the store')
-    phone: Optional[str] = Field(None, description='Phone number of the store')
-    taxId: Optional[str] = Field(
-        None, description='Tax identification number of the store'
-    )
+  name: Optional[str] = Field(None, description='Name of the store')
+  address: Optional[str] = Field(None, description='Address of the store')
+  phone: Optional[str] = Field(None, description='Phone number of the store')
+  taxId: Optional[str] = Field(
+    None, description='Tax identification number of the store'
+  )
 
 
 class Receipt(BaseModel):
-    number: Optional[str] = Field(None, description='Receipt number')
-    date: Optional[date_aliased] = Field(None, description='Date of purchase')
-    time: Optional[time_aliased] = Field(None, description='Time of purchase')
+  number: Optional[str] = Field(None, description='Receipt number')
+  date: Optional[date_aliased] = Field(None, description='Date of purchase')
+  time: Optional[time_aliased] = Field(None, description='Time of purchase')
 
 
 class Item(BaseModel):
-    code: Optional[str] = Field(None, description='Product code')
-    description: Optional[str] = Field(None, description='Product description')
-    price: Optional[float] = Field(None, description='Price of the item')
+  code: Optional[str] = Field(None, description='Product code')
+  description: Optional[str] = Field(None, description='Product description')
+  price: Optional[float] = Field(None, description='Price of the item')
 
 
 class Payment(BaseModel):
-    method: Optional[str] = Field(None, description='Payment method used')
-    cardNumber: Optional[str] = Field(
-        None, description='Partial card number used for payment'
-    )
-    authorizationNumber: Optional[str] = Field(
-        None, description='Authorization number for the payment'
-    )
+  method: Optional[str] = Field(None, description='Payment method used')
+  cardNumber: Optional[str] = Field(
+    None, description='Partial card number used for payment'
+  )
+  authorizationNumber: Optional[str] = Field(
+    None, description='Authorization number for the payment'
+  )
 
 
 class Vat(BaseModel):
-    rate: Optional[float] = Field(None, description='VAT rate applied')
-    amount: Optional[float] = Field(None, description='VAT amount')
+  rate: Optional[float] = Field(None, description='VAT rate applied')
+  amount: Optional[float] = Field(None, description='VAT amount')
 
 
 class Totals(BaseModel):
-    gross: Optional[float] = Field(None, description='Gross total amount')
-    net: Optional[float] = Field(None, description='Net total amount')
-    vat: Optional[Vat] = None
+  gross: Optional[float] = Field(None, description='Gross total amount')
+  net: Optional[float] = Field(None, description='Net total amount')
+  vat: Optional[Vat] = None
 
 
-class Model(BaseModel):
-    class Config:
-        extra = Extra.allow
+class ShopModel(BaseModel):
+  # class Config:
+  #   extra = Extra.allow
 
-    store: Optional[Store] = None
-    receipt: Optional[Receipt] = None
-    items: Optional[List[Item]] = Field(None, description='List of purchased items')
-    payment: Optional[Payment] = None
-    totals: Optional[Totals] = None
-    freetext: Optional[str] = Field(
-        None,
-        description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-    )
+  store: Optional[Store] = None
+  receipt: Optional[Receipt] = None
+  items: Optional[List[Item]] = Field(None, description='List of purchased items')
+  payment: Optional[Payment] = None
+  totals: Optional[Totals] = None
+  freetext: Optional[str] = Field(
+    None,
+    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
+  )

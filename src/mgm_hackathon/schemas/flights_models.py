@@ -10,56 +10,54 @@ from pydantic import BaseModel, Extra, Field
 
 
 class Passenger(BaseModel):
-    name: Optional[str] = Field(None, description='Full name of the passenger')
-    title: Optional[str] = Field(None, description='Title of the passenger (e.g. MR)')
+  name: Optional[str] = Field(None, description='Full name of the passenger')
+  title: Optional[str] = Field(None, description='Title of the passenger (e.g. MR)')
 
 
 class Booking(BaseModel):
-    code: Optional[str] = Field(None, description='Booking code / invoice number')
-    date: Optional[str] = Field(None, description='Date and time of booking')
-    modificationDate: Optional[str] = Field(
-        None, description='Date and time of last modification'
-    )
+  code: Optional[str] = Field(None, description='Booking code / invoice number')
+  date: Optional[str] = Field(None, description='Date and time of booking')
+  modificationDate: Optional[str] = Field(None, description='Date and time of last modification')
 
 
 class Departure(BaseModel):
-    time: Optional[str] = Field(None, description='Departure time')
-    city: Optional[str] = Field(None, description='Departure city')
+  time: Optional[str] = Field(None, description='Departure time')
+  city: Optional[str] = Field(None, description='Departure city')
 
 
 class Arrival(BaseModel):
-    time: Optional[str] = Field(None, description='Arrival time')
-    city: Optional[str] = Field(None, description='Arrival city')
+  time: Optional[str] = Field(None, description='Arrival time')
+  city: Optional[str] = Field(None, description='Arrival city')
 
 
 class Flight(BaseModel):
-    number: Optional[str] = Field(None, description='Flight number')
-    date: Optional[str] = Field(None, description='Date of the flight')
-    departure: Optional[Departure] = Field(None, description='Departure information')
-    arrival: Optional[Arrival] = Field(None, description='Arrival information')
-    seat: Optional[str] = Field(None, description='Seat number')
-    fare: Optional[str] = Field(None, description='Fare class (e.g. SMART X)')
+  number: Optional[str] = Field(None, description='Flight number')
+  date: Optional[str] = Field(None, description='Date of the flight')
+  departure: Optional[Departure] = Field(None, description='Departure information')
+  arrival: Optional[Arrival] = Field(None, description='Arrival information')
+  seat: Optional[str] = Field(None, description='Seat number')
+  fare: Optional[str] = Field(None, description='Fare class (e.g. SMART X)')
 
 
 class Payment(BaseModel):
-    totalPrice: Optional[float] = Field(None, description='Total price paid')
-    method: Optional[str] = Field(None, description='Payment method used')
+  totalPrice: Optional[float] = Field(None, description='Total price paid')
+  method: Optional[str] = Field(None, description='Payment method used')
 
 
-class Model(BaseModel):
-    class Config:
-        extra = Extra.allow
+class FlightModel(BaseModel):
+  # class Config:
+  #   extra = Extra.allow
 
-    passenger: Optional[Passenger] = Field(
-        None, description='Information about the passenger'
-    )
-    booking: Optional[Booking] = Field(None, description='Booking details')
-    flight: Optional[Flight] = Field(None, description='Flight details')
-    payment: Optional[Payment] = Field(None, description='Payment information')
-    additionalServices: Optional[List[str]] = Field(
-        None, description='Additional services booked'
-    )
-    freetext: Optional[str] = Field(
-        None,
-        description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-    )
+  passenger: Optional[Passenger] = Field(
+    None, description='Information about the passenger'
+  )
+  booking: Optional[Booking] = Field(None, description='Booking details')
+  flight: Optional[Flight] = Field(None, description='Flight details')
+  payment: Optional[Payment] = Field(None, description='Payment information')
+  additionalServices: Optional[List[str]] = Field(
+    None, description='Additional services booked'
+  )
+  freetext: Optional[str] = Field(
+    None,
+    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
+  )

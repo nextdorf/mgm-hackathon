@@ -11,59 +11,59 @@ from pydantic import BaseModel, Extra, Field
 
 
 class Guest(BaseModel):
-    name: Optional[str] = Field(None, description='The name of the guest')
+  name: Optional[str] = Field(None, description='The name of the guest')
 
 
 class Stay(BaseModel):
-    roomNumber: Optional[str] = Field(None, description='The room number')
-    checkIn: Optional[date_aliased] = Field(None, description='The check-in date')
-    checkOut: Optional[date_aliased] = Field(None, description='The check-out date')
+  roomNumber: Optional[str] = Field(None, description='The room number')
+  checkIn: Optional[date_aliased] = Field(None, description='The check-in date')
+  checkOut: Optional[date_aliased] = Field(None, description='The check-out date')
 
 
 class Charge(BaseModel):
-    date: Optional[date_aliased] = Field(None, description='The date of the charge')
-    description: Optional[str] = Field(None, description='Description of the charge')
-    amount: Optional[float] = Field(None, description='The amount charged')
+  date: Optional[date_aliased] = Field(None, description='The date of the charge')
+  description: Optional[str] = Field(None, description='Description of the charge')
+  amount: Optional[float] = Field(None, description='The amount charged')
 
 
 class Payment(BaseModel):
-    method: Optional[str] = Field(None, description='The payment method used')
-    amount: Optional[float] = Field(None, description='The total amount paid')
+  method: Optional[str] = Field(None, description='The payment method used')
+  amount: Optional[float] = Field(None, description='The total amount paid')
 
 
 class Totals(BaseModel):
-    net: Optional[float] = Field(None, description='The net total amount')
-    vat: Optional[float] = Field(None, description='The VAT amount')
-    gross: Optional[float] = Field(None, description='The gross total amount')
+  net: Optional[float] = Field(None, description='The net total amount')
+  vat: Optional[float] = Field(None, description='The VAT amount')
+  gross: Optional[float] = Field(None, description='The gross total amount')
 
 
 class HotelInfo(BaseModel):
-    name: Optional[str] = Field(None, description='The name of the hotel')
-    address: Optional[str] = Field(None, description='The address of the hotel')
-    contact: Optional[str] = Field(
-        None, description='Contact information for the hotel'
-    )
+  name: Optional[str] = Field(None, description='The name of the hotel')
+  address: Optional[str] = Field(None, description='The address of the hotel')
+  contact: Optional[str] = Field(
+      None, description='Contact information for the hotel'
+  )
 
 
-class Model(BaseModel):
-    class Config:
-        extra = Extra.allow
+class HotelModel(BaseModel):
+  # class Config:
+  #     extra = Extra.allow
 
-    invoiceNumber: Optional[str] = Field(None, description='The invoice number')
-    invoiceDate: Optional[date_aliased] = Field(
-        None, description='The date the invoice was issued'
-    )
-    guest: Optional[Guest] = Field(None, description='Information about the guest')
-    stay: Optional[Stay] = Field(None, description="Details of the guest's stay")
-    charges: Optional[List[Charge]] = Field(
-        None, description='List of charges on the invoice'
-    )
-    payment: Optional[Payment] = Field(None, description='Payment details')
-    totals: Optional[Totals] = Field(None, description='Summary of invoice totals')
-    hotelInfo: Optional[HotelInfo] = Field(
-        None, description='Information about the hotel'
-    )
-    freetext: Optional[str] = Field(
-        None,
-        description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-    )
+  invoiceNumber: Optional[str] = Field(None, description='The invoice number')
+  invoiceDate: Optional[date_aliased] = Field(
+    None, description='The date the invoice was issued'
+  )
+  guest: Optional[Guest] = Field(None, description='Information about the guest')
+  stay: Optional[Stay] = Field(None, description="Details of the guest's stay")
+  charges: Optional[List[Charge]] = Field(
+    None, description='List of charges on the invoice'
+  )
+  payment: Optional[Payment] = Field(None, description='Payment details')
+  totals: Optional[Totals] = Field(None, description='Summary of invoice totals')
+  hotelInfo: Optional[HotelInfo] = Field(
+    None, description='Information about the hotel'
+  )
+  freetext: Optional[str] = Field(
+    None,
+    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
+  )
