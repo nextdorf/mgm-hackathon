@@ -1,4 +1,5 @@
 from typing import Annotated, List, Literal, Optional
+from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import AnyMessage, add_messages
@@ -47,10 +48,16 @@ async def refine_msg(state: Refining, runtime: Runtime[Ctx]):
     Use the free-text field of the schema which may be relevant for the developer of the chatbot and for typing out the checks and requirement-validations
 
     Furthermore, perform the checks and ensure that the requirements which are specified by the schema-definition of the structured output.
-  ''')
-  response = await llm.ainvoke(prompt)
+  ''') + f'\n\n\n\n[INPUT MESSAGE]\n{msg}'
+  chat_hist = add_messages(state.messages, ('human', prompt)) 
+  response = await llm.ainvoke(chat_hist)
   _raw_msg = response['raw']
-  parsed_msg = response['parsed']
+  parsed_msg: RefineSchema = response['parsed']
+
+  refined_msg = parsed_msg.refined_version
+  refined_msg_in_hist = AIMessage(refined_msg, id = msg.id)
+  return dict(refined_msg=refined_msg, messages=[refined_msg_in_hist])
+
 
 
 

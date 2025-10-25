@@ -20,32 +20,16 @@ from langchain.tools import ToolRuntime
 import asyncio
 import aiofiles
 
+from .schemas import _generate_default_schemas
 
 dotenv.load_dotenv()
-
-
-class InvoiceEntry(BaseModel):
-  description: Optional[str] = Field(description='description of the entry')
-  date: Optional[str] = Field(description='date of the entry')
-  amount: Optional[float] = Field(description='Amount')
-  confidence_level: float = Field(description='Confidence level from 0 to 1 ')
-class Schema(BaseModel):
-  kind: Literal['cafe', 'flights', 'hotel', 'misc', 'public transport', 'restaurant', 'retail', 'unknown'] = Field(description='The kind of the input PDF')
-  entries: List[InvoiceEntry] = Field(description='List of invoice entries. Leave empty if none are found. Make sure to have one entry per invoice item')
-  total_price: float = Field(description='The total price to pay')
-  currency: str = Field(description='Currency of total_prices.')
-  confidence_level: float = Field(description='Confidence level from 0 to 1 ')
-  language: Literal['de', 'en', 'other']
-  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')
-
-
 
 
 
 @dataclass
 class Ctx:
   files: Dict[str, str] = field(default_factory=dict)
-  parsing_schemas: Dict[str, Type[BaseModel]] = field(default_factory=lambda: {Ctx.default_schema_uuid(): Schema})
+  parsing_schemas: Dict[str, Type[BaseModel]] = field(default_factory=_generate_default_schemas)
   # llm: BaseChatModel = field(default_factory=lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'))
   openai_kwargs: dict = field(default_factory=lambda: dict(model='gpt-5-mini', reasoning_effort='minimal'))
 
@@ -115,14 +99,6 @@ async def parse_pdfs(file_uuids: List[str], schema_uuid: Optional[str], user_pro
 
 tools = [parse_pdfs] + Ctx.ctx_tools()
 
-pdfs = {
-  str(uuid.uuid4()): p for p in [
-    'data/archive/2018/de/hotel/20180915_THE MADISON HAMBURG.pdf',
-    'data/archive/2018/de/cafe/20181024_018.pdf',
-    'data/archive/2020/de/miscellaneous/unterwegs-20200314_002.pdf',
-    # 'data/use cases.pdf',
-  ]
-}
 
 agent = create_agent(
   model=ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'),
@@ -133,6 +109,15 @@ agent = create_agent(
 if __name__ == '__main__':
   import nest_asyncio
   nest_asyncio.apply() # For jupyter notebook compability
+
+  pdfs = {
+    str(uuid.uuid4()): p for p in [
+      'data/archive/2018/de/hotel/20180915_THE MADISON HAMBURG.pdf',
+      'data/archive/2018/de/cafe/20181024_018.pdf',
+      'data/archive/2020/de/miscellaneous/unterwegs-20200314_002.pdf',
+      # 'data/use cases.pdf',
+    ]
+  }
 
   responses = []
 

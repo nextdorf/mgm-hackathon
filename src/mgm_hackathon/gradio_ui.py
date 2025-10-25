@@ -40,13 +40,17 @@ def gen_user_message(base_msg: Optional[str], uploaded_pdfs: List[str]):
     count_uploads = len(uploaded_pdfs)
     tagged_content.append((
       f'{'a new pdf' if count_uploads==1 else f'{count_uploads} new pdfs'} associated with the user prompt',
-      '\n'.join((f'{i:>2}) {uuid}' for i, uuid in enumerate(uploaded_pdfs)))
+      '\n'.join((f'{i+1:>2}) {uuid}' for i, uuid in enumerate(uploaded_pdfs)))
+    ))
+
+    tagged_content.append((
+      'soft requirement:', 'Unless otherwise specified by the user the content of the pdf(s) should be presented with markdown syntax. When applicable, preferably use tables for presenting several entries.'
     ))
   if base_msg:
     tagged_content.append(('original user prompt', base_msg))
   else:
     tagged_content.append(('no user prompt', ''))
-  res = leading_user_input_mark
+  res = leading_user_input_mark + '\n'
   res += '\n\n\n\n'.join((f'[{head.upper()}]\n{body}' for head, body in tagged_content))
   return res
 
@@ -77,7 +81,10 @@ async def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   print(json.dumps([m.model_dump() for m in agent_dialog], indent=2))
   final_response = next((m for m in agent_dialog[::-1] if isinstance(m, AIMessage)), '')
   artifacts = [x for x in (getattr(m, 'artifact', None) for m in agent_dialog) if x is not None]
-
+  
+  # Store artifacts in context for UI display
+  ctx.agent_ctx.artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
+  ctx.agent_ctx.artifacts.extend(artifacts)
 
   # TODO: what about the artifacts?
 
@@ -104,15 +111,67 @@ The User input which directly comes from the chat will be marked by the first li
 '''.strip()
 ctx_state = gr.State(FullCtx(Ctx(), [('system', system_prompt)]))
 
-# Create ChatInterface with multimodal support and session state
-demo = gr.ChatInterface(
-  fn=process_multimodal_message,
-  multimodal=True,
-  title='🤖 Multimodal Chat',
-  description='Chat with AI using text and files (PDF, images)',
-  type='messages',
-  additional_inputs=[ctx_state],
-  additional_outputs=[ctx_state],
-)
+# Function to get artifacts for display
+def get_artifacts(ctx: FullCtx):
+  artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
+  if not artifacts:
+    return "No artifacts generated yet."
+  
+  # TODO: Implement proper artifact file listing and management
+  # Currently displays basic artifact information. Future enhancements should include:
+  # - File download links for generated artifacts
+  # - Artifact type categorization (JSON, CSV, images, etc.)
+  # - Timestamp and metadata display
+  # - Delete/manage artifact functionality
+  # - Persistent storage across sessions
+  
+  artifact_list = []
+  for i, artifact in enumerate(artifacts):
+    artifact_info = f"Artifact {i+1}: {type(artifact).__name__}"
+    if hasattr(artifact, 'name'):
+      artifact_info += f" - {artifact.name}"
+    if hasattr(artifact, 'content'):
+      content_preview = str(artifact.content)[:100]
+      if len(str(artifact.content)) > 100:
+        content_preview += "..."
+      artifact_info += f"\nPreview: {content_preview}"
+    artifact_list.append(artifact_info)
+  
+  return "\n\n".join(artifact_list)
+
+# Create UI components
+with gr.Blocks(title="🤖 Invoice Analyzer") as demo:
+  gr.Markdown("# 🤖 Invoice Analyzer")
+  gr.Markdown("Automate your Workflow! 🚀")
+  
+  with gr.Row():
+    with gr.Column(scale=2):
+      # Main chat interface
+      chat_interface = gr.ChatInterface(
+        fn=process_multimodal_message,
+        multimodal=True,
+        type='messages',
+        additional_inputs=[ctx_state],
+        additional_outputs=[ctx_state],
+      )
+    
+    with gr.Column(scale=1):
+      # Artifacts panel
+      gr.Markdown("## Generated Artifacts")
+      artifacts_display = gr.Textbox(
+        label="Artifacts",
+        placeholder="Generated artifacts will appear here...",
+        lines=10,
+        interactive=False
+      )
+      
+      refresh_btn = gr.Button("Refresh Artifacts")
+      
+      # Update artifacts display when refresh button is clicked
+      refresh_btn.click(
+        fn=get_artifacts,
+        inputs=[ctx_state],
+        outputs=[artifacts_display]
+      )
 
 
