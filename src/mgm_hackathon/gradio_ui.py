@@ -7,11 +7,12 @@ from pathlib import Path
 from dataclasses import dataclass
 from langchain_core.messages import AIMessage, AnyMessage
 from langgraph.graph.message import add_messages
-from typing import List
+from typing import List, Optional
 
 dotenv.load_dotenv()
 
-from agent import agent, Ctx
+from .agent import agent, Ctx
+# from .util import multistrip
 
 
 @dataclass
@@ -28,25 +29,43 @@ class FullCtx:
       self.chat_hist = all_msgs
     return all_msgs
 
+leading_user_input_mark = '+++ Prompt with metadata +++'.upper()
 
+def gen_user_message(base_msg: Optional[str], uploaded_pdfs: List[str]):
+  if not base_msg:
+    base_msg = 'Please analyze the uploaded files.'
+  tagged_content = []
+  if uploaded_pdfs:
+    count_uploads = len(uploaded_pdfs)
+    tagged_content.append((
+      f'{'a new pdf' if count_uploads==1 else f'{count_uploads} new pdfs'} associated with the user prompt',
+      '\n'.join((f'{i:>2}) {uuid}' for i, uuid in enumerate(uploaded_pdfs)))
+    ))
+  if base_msg:
+    tagged_content.append(('original user prompt', base_msg))
+  else:
+    tagged_content.append(('no user prompt', ''))
+  res = leading_user_input_mark
+  res += '\n\n\n\n'.join((f'[{head.upper()}]\n{body}' for head, body in tagged_content))
+  return res
 
-async def process_multimodal_message(in_msg, history, ctx: FullCtx):
+async def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   msg = in_msg.get('text')
   files = in_msg.get('files')
   if not msg and not files:
     return 'Please provide a message or upload a file.', ctx
   
-  # try:
+  new_file_uuids = []
   # Add uploaded files to persistent context
-  if files:
-    for file in files:
-      file_path = Path(file)
-      file_uuid = str(uuid.uuid4())
-      # Store the file path in the context
-      ctx.agent_ctx.files[file_uuid] = str(file_path)
+  for file in files:
+    file_path = Path(file)
+    file_uuid = str(uuid.uuid4())
+    new_file_uuids.append(file_uuid)
+    ctx.agent_ctx.files[file_uuid] = str(file_path)
   
   # Build user message for the agent
-  user_message = msg if msg else 'Please analyze the uploaded files.'
+  # user_message = msg if msg else 'Please analyze the uploaded files.'
+  user_message = gen_user_message(msg, new_file_uuids)
   
   # Use the agent with persistent context
   response = await agent.ainvoke(
@@ -68,7 +87,7 @@ async def process_multimodal_message(in_msg, history, ctx: FullCtx):
   #   return f'Error: {str(e)}', ctx
 
 # Create persistent context state
-system_prompt = '''
+system_prompt = f'''
 You are a helpful AI agent who's main task it is to analyze invoices.
 
 By default you answer in the language used by the user.
@@ -79,6 +98,9 @@ The user interacts with you via a chat-ui - the total source code can be found a
 Furthermore, you aim to help the user with any follow-up question they might have or report the extracted data in the ideal/specified format.
 
 Whenever possible, aim to give short but informative and relevant answers (1-2 sentences), unless you are requested to explain something in detail.
+
+
+The User input which directly comes from the chat will be marked by the first line being "{leading_user_input_mark}". These types of messages usually contain tags of the form "[...]" followed by the body associated with the tag. It may be used to inject metadata for the respective user prompt.
 '''.strip()
 ctx_state = gr.State(FullCtx(Ctx(), [('system', system_prompt)]))
 
@@ -93,4 +115,4 @@ demo = gr.ChatInterface(
   additional_outputs=[ctx_state],
 )
 
-demo.launch(share=False)
+

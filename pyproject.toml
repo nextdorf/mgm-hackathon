@@ -12,3 +12,10 @@ dependencies = [
   "langgraph>=1.0.1",
   "nest-asyncio>=1.6.0",
 ]
+
+[project.scripts]
+mgm-hackathon = "mgm_hackathon:main"
+
+[build-system]
+requires = ["uv_build>=0.9.5"]
+build-backend = "uv_build"
