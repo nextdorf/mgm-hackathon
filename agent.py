@@ -17,8 +17,6 @@ from dataclasses import dataclass, field
 import langchain.tools as lang_tools
 from langchain.tools import ToolRuntime
 
-import nest_asyncio
-nest_asyncio.apply() # For jupyter notebook compability
 import asyncio
 import aiofiles
 
@@ -48,7 +46,12 @@ class Schema(BaseModel):
 class Ctx:
   files: Dict[str, str] = field(default_factory=dict)
   parsing_schemas: Dict[str, Type[BaseModel]] = field(default_factory=lambda: {Ctx.default_schema_uuid(): Schema})
-  llm: BaseChatModel = field(default_factory=lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'))
+  # llm: BaseChatModel = field(default_factory=lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'))
+  openai_kwargs: dict = field(default_factory=lambda: dict(model='gpt-5-mini', reasoning_effort='minimal'))
+
+  @property
+  def llm(self):
+    return ChatOpenAI(**self.openai_kwargs)
 
   def get_parsing_schema(self, uuid: str):
     if uuid not in self.parsing_schemas:
@@ -128,6 +131,9 @@ agent = create_agent(
 )
 
 if __name__ == '__main__':
+  import nest_asyncio
+  nest_asyncio.apply() # For jupyter notebook compability
+
   responses = []
 
   responses.append(agent.invoke(
