@@ -11,7 +11,8 @@ from typing import List, Optional
 
 dotenv.load_dotenv()
 
-from .agent import agent, Ctx
+from .agent import Ctx
+from .refiner import refiner as agent
 # from .util import multistrip
 
 
@@ -68,8 +69,7 @@ async def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   user_message = gen_user_message(msg, new_file_uuids)
   
   # Use the agent with persistent context
-  response = await agent.ainvoke(
-    # {'messages': [{'role': 'user', 'content': user_message}]},
+  response = await agent.ainvoke( # pylint: disable=no-member
     dict(messages=ctx.update_chat_hist([('human', user_message)])),
     context=ctx.agent_ctx
   )
