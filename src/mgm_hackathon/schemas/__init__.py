@@ -29,5 +29,6 @@ class Schema(BaseModel):
 def _generate_default_schemas():
   res = { str(uuid.UUID(int=0)): Schema }
   res.update({str(uuid.uuid4()) : schema for schema in [FlightModel, HotelModel, PublicTransportModel, RestaurantModel, ShopModel]})
+  # Schema(kind='cafe', entries=[], total_price=0, currency='', confidence_level=0, language='de', free_text='').model_dump_json()
   return res
 

@@ -9,8 +9,10 @@ from langchain_core.messages import AIMessage, AnyMessage
 from langgraph.graph.message import add_messages
 from typing import List, Optional
 
+
 dotenv.load_dotenv()
 
+from .util import temp_async_json_dump
 from .agent import Ctx
 from .refiner import refiner as agent
 # from .util import multistrip
@@ -82,13 +84,19 @@ async def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   final_response = next((m for m in agent_dialog[::-1] if isinstance(m, AIMessage)), '')
   artifacts = [x for x in (getattr(m, 'artifact', None) for m in agent_dialog) if x is not None]
   
+
+  saved_paths = []
+  for art in artifacts:
+    p = await temp_async_json_dump(art.model_dump())
+    saved_paths.append(str(p))
+
   # Store artifacts in context for UI display
-  ctx.agent_ctx.artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
-  ctx.agent_ctx.artifacts.extend(artifacts)
+  # ctx.agent_ctx.artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
+  # ctx.agent_ctx.artifacts.extend(artifacts)
 
   # TODO: what about the artifacts?
 
-  return final_response.content, ctx
+  return final_response.content, ctx, saved_paths
     
   # except Exception as e:
   #   return f'Error: {str(e)}', ctx
@@ -111,67 +119,24 @@ The User input which directly comes from the chat will be marked by the first li
 '''.strip()
 ctx_state = gr.State(FullCtx(Ctx(), [('system', system_prompt)]))
 
-# Function to get artifacts for display
-def get_artifacts(ctx: FullCtx):
-  artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
-  if not artifacts:
-    return "No artifacts generated yet."
-  
-  # TODO: Implement proper artifact file listing and management
-  # Currently displays basic artifact information. Future enhancements should include:
-  # - File download links for generated artifacts
-  # - Artifact type categorization (JSON, CSV, images, etc.)
-  # - Timestamp and metadata display
-  # - Delete/manage artifact functionality
-  # - Persistent storage across sessions
-  
-  artifact_list = []
-  for i, artifact in enumerate(artifacts):
-    artifact_info = f"Artifact {i+1}: {type(artifact).__name__}"
-    if hasattr(artifact, 'name'):
-      artifact_info += f" - {artifact.name}"
-    if hasattr(artifact, 'content'):
-      content_preview = str(artifact.content)[:100]
-      if len(str(artifact.content)) > 100:
-        content_preview += "..."
-      artifact_info += f"\nPreview: {content_preview}"
-    artifact_list.append(artifact_info)
-  
-  return "\n\n".join(artifact_list)
 
-# Create UI components
-with gr.Blocks(title="🤖 Invoice Analyzer") as demo:
-  gr.Markdown("# 🤖 Invoice Analyzer")
-  gr.Markdown("Automate your Workflow! 🚀")
-  
-  with gr.Row():
-    with gr.Column(scale=2):
-      # Main chat interface
-      chat_interface = gr.ChatInterface(
-        fn=process_multimodal_message,
-        multimodal=True,
-        type='messages',
-        additional_inputs=[ctx_state],
-        additional_outputs=[ctx_state],
-      )
-    
-    with gr.Column(scale=1):
-      # Artifacts panel
-      gr.Markdown("## Generated Artifacts")
-      artifacts_display = gr.Textbox(
-        label="Artifacts",
-        placeholder="Generated artifacts will appear here...",
-        lines=10,
-        interactive=False
-      )
-      
-      refresh_btn = gr.Button("Refresh Artifacts")
-      
-      # Update artifacts display when refresh button is clicked
-      refresh_btn.click(
-        fn=get_artifacts,
-        inputs=[ctx_state],
-        outputs=[artifacts_display]
-      )
+# Create ChatInterface with multimodal support and session state
 
+artifacts_out = gr.Files(label="Artifacts", interactive=False)
+
+demo = gr.ChatInterface(
+  fn=process_multimodal_message,
+  multimodal=True,
+  title='🤖 Invoice Analyzer',
+  description='Automate your Workflow! 🚀',
+  type='messages',
+  additional_inputs=[ctx_state],
+  additional_outputs=[ctx_state, artifacts_out],
+
+  textbox=gr.MultimodalTextbox(
+    file_count="multiple",        # ← allow multi-upload
+    file_types=[".pdf"],          # optional: only PDFs
+    placeholder="Type or drop multiple PDFs..."
+  ),
+)
 
