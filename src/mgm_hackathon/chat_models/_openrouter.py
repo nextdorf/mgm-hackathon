@@ -5,6 +5,8 @@ from openai import responses
 from pydantic import BaseModel, Field
 import base64
 
+from ..util import _merge_dicts
+
 
 # See https://openrouter.ai/request-builder
 

@@ -1,7 +1,9 @@
-from typing import Any, List, Type
+from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
 import json
 from pathlib import Path
 import anyio
+
+T = TypeVar('T')
 
 
 def multistrip(s: str):
@@ -41,4 +43,41 @@ async def temp_async_json_dump(data: dict) -> Path:
     await f.write(json.dumps(data, ensure_ascii=False, indent=2))
     await f.flush()
     return Path(f.name)
+
+
+
+class LazyVal(Generic[T]):
+  def __init__(self, f: Callable[[], T]):
+    self.__f = f
+    self.__calculated: bool = False
+    self.__val: Optional[T] = None
+  @property
+  def val(self) -> T:
+    if not self.__calculated:
+      self.__val = self.__f()
+      self.__calculated = True
+    return self.__val # pyright: ignore[reportReturnType]
+  @val.setter
+  def val(self, val: T):
+    self.__val = val
+    self.__calculated = True
+  @val.deleter
+  def val(self):
+    self.__val = None
+    self.__calculated = False
+
+  def copy(self, recalculate=False):
+    res = LazyVal(self.__f)
+    if recalculate:
+      del res.val
+    return res
+
+
+def _merge_dicts(src: dict, dst: dict):
+  for k, v in src.items():
+    dst[k] = _merge_dicts(v, dst.get(k, {})) if isinstance(v, dict) else v
+  return dst
+
+
+
 

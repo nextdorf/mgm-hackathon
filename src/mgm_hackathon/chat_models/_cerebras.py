@@ -4,13 +4,9 @@ from langchain_openai import ChatOpenAI
 from openai import responses
 from pydantic import BaseModel, Field
 
+from ..util import _merge_dicts
 
 # See https://openrouter.ai/request-builder
-
-def _merge_dicts(src: dict, dst: dict):
-  for k, v in src.items():
-    dst[k] = _merge_dicts(v, dst.get(k, {})) if isinstance(v, dict) else v
-  return dst
 
 class ChatCerebras(ChatOpenAI):
   def __init__(self, *, model: Literal['llama3.1-8b', 'llama-3.3-70b', 'gpt-oss-120b', 'qwen-3-32b'] = 'gpt-oss-120b', **kwargs):
