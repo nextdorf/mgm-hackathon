@@ -21,21 +21,31 @@ import asyncio
 import aiofiles
 
 from .schemas import _generate_default_schemas
+from .chat_models import MultiChatModel
 
 dotenv.load_dotenv()
 
 
+multi_llm = MultiChatModel()
 
 @dataclass
 class Ctx:
   files: Dict[str, str] = field(default_factory=dict)
   parsing_schemas: Dict[str, Type[BaseModel]] = field(default_factory=_generate_default_schemas)
   # llm: BaseChatModel = field(default_factory=lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'))
-  openai_kwargs: dict = field(default_factory=lambda: dict(model='gpt-5-mini', reasoning_effort='minimal'))
+  # openai_kwargs: dict = field(default_factory=lambda: dict(model='gpt-5-mini', reasoning_effort='minimal'))
+  llm_choice: dict = field(default_factory=lambda: dict(
+    default='router-gemini',
+    ocr='router-gemini'
+  ))
 
-  @property
-  def llm(self):
-    return ChatOpenAI(**self.openai_kwargs)
+  # @property
+  # def llm(self):
+  #   return ChatOpenAI(**self.openai_kwargs)
+
+  def get_llm(self, purpose: Literal['default', 'ocr'] = 'default'):
+    choice = self.llm_choice.get(purpose, 'default')
+    return multi_llm[choice]
 
   def get_parsing_schema(self, uuid: str):
     if uuid not in self.parsing_schemas:
@@ -85,7 +95,8 @@ async def parse_pdfs(file_uuids: List[str], schema_uuid: Optional[str], user_pro
 
   msg = dict(role='user', content=content)
 
-  llm = runtime.context.llm
+  # llm = runtime.context.llm
+  llm = runtime.context.get_llm('ocr')
   schema = runtime.context.get_parsing_schema(schema_uuid) # pyright: ignore[reportCallIssue]
   llm_structured = llm.with_structured_output(schema, include_raw=True, strict=True)
 
@@ -101,7 +112,8 @@ tools = [parse_pdfs] + Ctx.ctx_tools()
 
 
 agent = create_agent(
-  model=ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'),
+  # model=ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'),
+  model=Ctx().get_llm(),
   tools=tools,
   context_schema=Ctx
 )

@@ -17,7 +17,7 @@ class Refining:
   messages: Annotated[List[AnyMessage], add_messages] # = field(default_factory=list)
   id_msg_to_refine: Optional[str] = field(default=None)
   refined_msg: Optional[str] = field(default=None)
-  reasoning_effort: Optional[Literal['minimal', 'low', 'medium', 'high']] = field(default='medium')
+  # reasoning_effort: Optional[Literal['minimal', 'low', 'medium', 'high']] = field(default='medium')
 
 class RefineSchema(BaseModel):
   refined_version: str = Field(description='A refined version of the input message (the input message = the last message in the history). The refined_version is considered to be the output message. It is intended to be a drop in replacement for the input message.')
@@ -32,12 +32,13 @@ async def refine_msg(state: Refining, runtime: Runtime[Ctx]):
   if msg is None:
     return {}
   
-  if state.reasoning_effort:
-    base_llm_kwargs = runtime.context.openai_kwargs
-    base_llm_kwargs.update(reasoning_effort=state.reasoning_effort)
-    base_llm = ChatOpenAI(**base_llm_kwargs)
-  else:
-    base_llm = state.llm
+  # if state.reasoning_effort:
+  #   base_llm_kwargs = runtime.context.openai_kwargs
+  #   base_llm_kwargs.update(reasoning_effort=state.reasoning_effort)
+  #   base_llm = ChatOpenAI(**base_llm_kwargs)
+  # else:
+  #   base_llm = state.llm
+  base_llm = runtime.context.get_llm()
   llm = base_llm.with_structured_output(RefineSchema, strict=True, include_raw=True)
 
   prompt = multistrip('''
@@ -48,9 +49,9 @@ async def refine_msg(state: Refining, runtime: Runtime[Ctx]):
     Use the free-text field of the schema which may be relevant for the developer of the chatbot and for typing out the checks and requirement-validations
 
     Furthermore, perform the checks and ensure that the requirements which are specified by the schema-definition of the structured output.
-  ''') + f'\n\n\n\n[INPUT MESSAGE]\n{msg}'
+  ''') + f'\n\n\n\n[INPUT MESSAGE]\n{msg.content}'
   chat_hist = add_messages(state.messages, ('human', prompt)) 
-  response = await llm.ainvoke(chat_hist)
+  response: dict = await llm.ainvoke(chat_hist)
   _raw_msg = response['raw']
   parsed_msg: RefineSchema = response['parsed']
 
