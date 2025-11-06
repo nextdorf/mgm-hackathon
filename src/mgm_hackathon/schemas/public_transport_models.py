@@ -2,17 +2,15 @@
 #   filename:  schema.json
 #   timestamp: 2025-10-25T08:50:11+00:00
 
-from __future__ import annotations
-
-from datetime import date, datetime
-from typing import Optional
-
-from pydantic import BaseModel, Extra, Field
-
+# from datetime import date, datetime
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
+from ._types import Confidence, Date, Datetime
 
 class CustomerInfo(BaseModel):
   name: Optional[str] = Field(None, description='Name of the customer')
   address: Optional[str] = Field(None, description='Address of the customer')
+  confidence: Confidence
 
 
 class OrderInfo(BaseModel):
@@ -22,24 +20,26 @@ class OrderInfo(BaseModel):
   receiptNumber: Optional[str] = Field(
     None, description='Unique identifier for the receipt'
   )
-  invoiceDate: Optional[date] = Field(None, description='Date of the invoice')
+  invoiceDate: Optional[Date] = Field(None, description='Date of the invoice')
+  confidence: Confidence
 
 
 class TicketInfo(BaseModel):
-  purchaseDate: Optional[date] = Field(None, description='Date of ticket purchase')
+  purchaseDate: Optional[Datetime] = Field(None, description='Date of ticket purchase')
   description: Optional[str] = Field(
     None,
     description='Description of the ticket including type, validity, and route',
   )
-  validFrom: Optional[datetime] = Field(
+  validFrom: Optional[Datetime] = Field(
     None, description='Start of ticket validity period'
   )
-  validTo: Optional[datetime] = Field(
+  validTo: Optional[Datetime] = Field(
     None, description='End of ticket validity period'
   )
   bookingNumber: Optional[str] = Field(
     None, description='Booking number for the ticket'
   )
+  confidence: Confidence
 
 
 class PaymentInfo(BaseModel):
@@ -48,8 +48,10 @@ class PaymentInfo(BaseModel):
     None, description='VAT rate applied to the purchase'
   )
   vatAmount: Optional[float] = Field(None, description='Amount of VAT charged')
-  totalAmount: Optional[float] = Field(None, description='Total amount including VAT')
+  totalAmount: float = Field(description='Total amount including VAT')
+  currency: str = Field(description='Currency of `totalAmount`, `vatAmount`, and `netAmount`.')
   paymentMethod: Optional[str] = Field(None, description='Method of payment used')
+  confidence: Confidence
 
 
 class VendorInfo(BaseModel):
@@ -57,12 +59,13 @@ class VendorInfo(BaseModel):
   taxNumber: Optional[str] = Field(
     None, description='Tax identification number of the vendor'
   )
+  confidence: Confidence
 
 
 class PublicTransportModel(BaseModel):
   # class Config:
   #   extra = Extra.allow
-
+  kind: Literal['public-transport']
   customerInfo: Optional[CustomerInfo] = Field(
     None, description='Information about the customer'
   )
@@ -78,7 +81,5 @@ class PublicTransportModel(BaseModel):
   vendorInfo: Optional[VendorInfo] = Field(
     None, description='Information about the vendor'
   )
-  freetext: Optional[str] = Field(
-    None,
-    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-  )
+  confidence: Confidence
+  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')

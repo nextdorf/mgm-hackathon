@@ -2,62 +2,64 @@
 #   filename:  schema.json
 #   timestamp: 2025-10-25T08:49:36+00:00
 
-from __future__ import annotations
-
-from typing import List, Optional
-
-from pydantic import BaseModel, Extra, Field
+from typing import List, Literal, Optional
+# from datetime import date as date_aliased
+from pydantic import BaseModel, Field
+from ._types import Confidence, Datetime
 
 
 class Passenger(BaseModel):
   name: Optional[str] = Field(None, description='Full name of the passenger')
   title: Optional[str] = Field(None, description='Title of the passenger (e.g. MR)')
+  confidence: Confidence
 
 
 class Booking(BaseModel):
   code: Optional[str] = Field(None, description='Booking code / invoice number')
-  date: Optional[str] = Field(None, description='Date and time of booking')
-  modificationDate: Optional[str] = Field(None, description='Date and time of last modification')
+  date: Optional[Datetime] = Field(None, description='Date and time of booking')
+  modificationDate: Optional[Datetime] = Field(None, description='Date and time of last modification')
+  confidence: Confidence
 
 
 class Departure(BaseModel):
   time: Optional[str] = Field(None, description='Departure time')
   city: Optional[str] = Field(None, description='Departure city')
+  confidence: Confidence
 
 
 class Arrival(BaseModel):
   time: Optional[str] = Field(None, description='Arrival time')
   city: Optional[str] = Field(None, description='Arrival city')
+  confidence: Confidence
 
 
 class Flight(BaseModel):
   number: Optional[str] = Field(None, description='Flight number')
-  date: Optional[str] = Field(None, description='Date of the flight')
+  date: Optional[Datetime] = Field(None, description='Date of the flight')
   departure: Optional[Departure] = Field(None, description='Departure information')
   arrival: Optional[Arrival] = Field(None, description='Arrival information')
   seat: Optional[str] = Field(None, description='Seat number')
   fare: Optional[str] = Field(None, description='Fare class (e.g. SMART X)')
+  confidence: Confidence
 
 
 class Payment(BaseModel):
-  totalPrice: Optional[float] = Field(None, description='Total price paid')
+  totalPrice: float = Field(description='Total price paid')
+  currency: str = Field(description='Currency of `totalPrice`.')
   method: Optional[str] = Field(None, description='Payment method used')
+  confidence: Confidence
 
 
 class FlightModel(BaseModel):
   # class Config:
   #   extra = Extra.allow
-
+  kind: Literal['flight']
   passenger: Optional[Passenger] = Field(
     None, description='Information about the passenger'
   )
   booking: Optional[Booking] = Field(None, description='Booking details')
   flight: Optional[Flight] = Field(None, description='Flight details')
   payment: Optional[Payment] = Field(None, description='Payment information')
-  additionalServices: Optional[List[str]] = Field(
-    None, description='Additional services booked'
-  )
-  freetext: Optional[str] = Field(
-    None,
-    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-  )
+  additionalServices: List[str] = Field(description='Additional services booked', default_factory=list)
+  confidence: Confidence
+  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')

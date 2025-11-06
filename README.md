@@ -19,3 +19,9 @@ unzip pdf_receipt.zip
 ```bash
 uv run mgm-hackathon
 ```
+
+## Tests
+```bash
+uv sync --extra dev
+uv run --extra dev pytest
+```

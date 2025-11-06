@@ -2,13 +2,12 @@
 #   filename:  schema.json
 #   timestamp: 2025-10-25T08:50:29+00:00
 
-from __future__ import annotations
+# from datetime import date as date_aliased
+# from datetime import time as time_aliased
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field
 
-from datetime import date as date_aliased
-from datetime import time as time_aliased
-from typing import List, Optional
-
-from pydantic import BaseModel, Extra, Field
+from ._types import Confidence, Datetime
 
 
 class Store(BaseModel):
@@ -18,18 +17,21 @@ class Store(BaseModel):
   taxId: Optional[str] = Field(
     None, description='Tax identification number of the store'
   )
+  confidence: Confidence
 
 
 class Receipt(BaseModel):
   number: Optional[str] = Field(None, description='Receipt number')
-  date: Optional[date_aliased] = Field(None, description='Date of purchase')
-  time: Optional[time_aliased] = Field(None, description='Time of purchase')
+  date: Optional[Datetime] = Field(None, description='Date and time of purchase')
+  confidence: Confidence
 
 
 class Item(BaseModel):
   code: Optional[str] = Field(None, description='Product code')
-  description: Optional[str] = Field(None, description='Product description')
-  price: Optional[float] = Field(None, description='Price of the item')
+  description: str = Field(description='Product description')
+  price: float = Field(description='Price of the item')
+  currency: str = Field(description='Currency of `price`.')
+  confidence: Confidence
 
 
 class Payment(BaseModel):
@@ -40,29 +42,32 @@ class Payment(BaseModel):
   authorizationNumber: Optional[str] = Field(
     None, description='Authorization number for the payment'
   )
+  confidence: Confidence
 
 
 class Vat(BaseModel):
   rate: Optional[float] = Field(None, description='VAT rate applied')
-  amount: Optional[float] = Field(None, description='VAT amount')
+  amount: float = Field(description='VAT amount')
+  currency: str = Field(description='Currency of `amount`.')
+  confidence: Confidence
 
 
 class Totals(BaseModel):
-  gross: Optional[float] = Field(None, description='Gross total amount')
+  gross: float = Field(description='Gross total amount')
   net: Optional[float] = Field(None, description='Net total amount')
-  vat: Optional[Vat] = None
+  vat: Optional[Vat] = Field(None)
+  currency: str = Field(description='Currency of `gross` and `net`.')
+  confidence: Confidence
 
 
 class ShopModel(BaseModel):
   # class Config:
   #   extra = Extra.allow
-
-  store: Optional[Store] = None
-  receipt: Optional[Receipt] = None
-  items: Optional[List[Item]] = Field(None, description='List of purchased items')
-  payment: Optional[Payment] = None
-  totals: Optional[Totals] = None
-  freetext: Optional[str] = Field(
-    None,
-    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-  )
+  kind: Literal['shop']
+  store: Optional[Store] = Field(None)
+  receipt: Optional[Receipt] = Field(None)
+  items: List[Item] = Field(description='List of purchased items', default_factory=list)
+  payment: Optional[Payment] = Field(None)
+  totals: Optional[Totals] = Field(None)
+  confidence: Confidence
+  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')

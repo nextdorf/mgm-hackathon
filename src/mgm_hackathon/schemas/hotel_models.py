@@ -2,39 +2,45 @@
 #   filename:  schema.json
 #   timestamp: 2025-10-25T08:49:47+00:00
 
-from __future__ import annotations
-
-from datetime import date as date_aliased
-from typing import List, Optional
-
-from pydantic import BaseModel, Extra, Field
+# from datetime import date as date_aliased
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field
+from ._types import Confidence, Date
 
 
 class Guest(BaseModel):
-  name: Optional[str] = Field(None, description='The name of the guest')
+  name: str = Field(description='The name of the guest')
+  confidence: Confidence
 
 
 class Stay(BaseModel):
   roomNumber: Optional[str] = Field(None, description='The room number')
-  checkIn: Optional[date_aliased] = Field(None, description='The check-in date')
-  checkOut: Optional[date_aliased] = Field(None, description='The check-out date')
+  checkIn: Optional[Date] = Field(None, description='The check-in date')
+  checkOut: Optional[Date] = Field(None, description='The check-out date')
+  confidence: Confidence
 
 
 class Charge(BaseModel):
-  date: Optional[date_aliased] = Field(None, description='The date of the charge')
+  date: Optional[Date] = Field(None, description='The date of the charge')
   description: Optional[str] = Field(None, description='Description of the charge')
-  amount: Optional[float] = Field(None, description='The amount charged')
+  amount: float = Field(description='The amount charged')
+  currency: str = Field(description='Currency of `amount`.')
+  confidence: Confidence
 
 
 class Payment(BaseModel):
   method: Optional[str] = Field(None, description='The payment method used')
-  amount: Optional[float] = Field(None, description='The total amount paid')
+  amount: float = Field(description='The total amount paid')
+  currency: str = Field(description='Currency of `amount`.')
+  confidence: Confidence
 
 
 class Totals(BaseModel):
   net: Optional[float] = Field(None, description='The net total amount')
   vat: Optional[float] = Field(None, description='The VAT amount')
-  gross: Optional[float] = Field(None, description='The gross total amount')
+  gross: float = Field(None, description='The gross total amount')
+  currency: str = Field(description='Currency of `net`, `vat`, and `gross`.')
+  confidence: Confidence
 
 
 class HotelInfo(BaseModel):
@@ -43,27 +49,24 @@ class HotelInfo(BaseModel):
   contact: Optional[str] = Field(
       None, description='Contact information for the hotel'
   )
+  confidence: Confidence
 
 
 class HotelModel(BaseModel):
   # class Config:
   #     extra = Extra.allow
-
+  kind: Literal['hotel']
   invoiceNumber: Optional[str] = Field(None, description='The invoice number')
-  invoiceDate: Optional[date_aliased] = Field(
+  invoiceDate: Optional[Date] = Field(
     None, description='The date the invoice was issued'
   )
   guest: Optional[Guest] = Field(None, description='Information about the guest')
   stay: Optional[Stay] = Field(None, description="Details of the guest's stay")
-  charges: Optional[List[Charge]] = Field(
-    None, description='List of charges on the invoice'
-  )
+  charges: List[Charge] = Field(description='List of charges on the invoice', default_factory=list)
   payment: Optional[Payment] = Field(None, description='Payment details')
   totals: Optional[Totals] = Field(None, description='Summary of invoice totals')
   hotelInfo: Optional[HotelInfo] = Field(
     None, description='Information about the hotel'
   )
-  freetext: Optional[str] = Field(
-    None,
-    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-  )
+  confidence: Confidence
+  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')

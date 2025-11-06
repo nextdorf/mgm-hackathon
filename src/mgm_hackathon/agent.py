@@ -7,7 +7,7 @@ import dotenv
 import base64
 from langgraph.runtime import Runtime
 import langsmith
-import uuid
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, create_model
 from typing import List, Literal, Optional, Dict, Type
@@ -20,7 +20,8 @@ from langchain.tools import ToolRuntime
 import asyncio
 import aiofiles
 
-from .schemas import _generate_default_schemas
+from .util import _merge_dicts
+from .schemas import _generate_default_schemas, ReprBuilder, schema_union
 from .chat_models import MultiChatModel
 
 dotenv.load_dotenv()
@@ -35,8 +36,9 @@ class Ctx:
   # llm: BaseChatModel = field(default_factory=lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='minimal'))
   # openai_kwargs: dict = field(default_factory=lambda: dict(model='gpt-5-mini', reasoning_effort='minimal'))
   llm_choice: dict = field(default_factory=lambda: dict(
-    default='router-gemini',
-    ocr='router-gemini'
+    # default='router-gemini',
+    default='cerebras-gpt-oss-120b',
+    ocr='gpt-4.1-nano'
   ))
 
   # @property
@@ -47,10 +49,24 @@ class Ctx:
     choice = self.llm_choice.get(purpose, 'default')
     return multi_llm[choice]
 
-  def get_parsing_schema(self, uuid: str):
-    if uuid not in self.parsing_schemas:
-      uuid = Ctx.default_schema_uuid()
-    return self.parsing_schemas[uuid]
+  def get_parsing_schema(self, uuid: None|str|List[str] = None):
+    # if uuid is None or uuid not in self.parsing_schemas:
+    #   uuid = Ctx.default_schema_uuid()
+    # return self.parsing_schemas[uuid]
+    if isinstance(uuid, str):
+      uuids = [uuid]
+    elif uuid is None:
+      uuids = []
+    else:
+      uuids = list(uuid)
+    uuids = [u for u in uuids if u in self.parsing_schemas]
+    if not uuids:
+      # uuids = list((u for u in self.parsing_schemas if UUID(u).int))
+      uuids = list(self.parsing_schemas)
+    if len(uuids) == 1:
+      return self.parsing_schemas[uuids[0]]
+    else:
+      return schema_union(*(self.parsing_schemas[u] for u in uuids))
 
   @staticmethod
   def default_schema_uuid():
@@ -61,7 +77,7 @@ class Ctx:
     @lang_tools.tool(description='Returns a lookup dictionary for all available files')
     async def get_files(runtime: ToolRuntime[Ctx]):
       return runtime.context.files
-    @lang_tools.tool(description='Returns a lookup dictionary for all available parsing schemas')
+    @lang_tools.tool(description='Returns a lookup dictionary for all available parsing schemas. Invoke fallback-schema by passing `None`')
     async def get_parsing_schemas(runtime: ToolRuntime[Ctx]):
       return runtime.context.parsing_schemas
     
@@ -70,10 +86,12 @@ class Ctx:
 
 
 @lang_tools.tool(
-  description='Analyze the given files from `file_uuids`. If set the Output is returned in a structure specified by `schema_uuid`. If `schema_uuid` is unspecified, a fallback schema is used.',
+  description='Analyze the given files from `file_uuids`. If set the Output is returned in a structure specified by `schema_uuid`. If `schema_uuid` is specified as `None`, a fallback schema is used. The returned content will be in the preferred markdown+extension format.',
   response_format='content_and_artifact',
 )
 async def parse_pdfs(file_uuids: List[str], schema_uuid: Optional[str], user_prompt: str, runtime: ToolRuntime[Ctx]):
+  llm = runtime.context.get_llm('ocr')
+
   content = []
   if user_prompt:
     content.append(dict(type='text', text=user_prompt))
@@ -83,20 +101,19 @@ async def parse_pdfs(file_uuids: List[str], schema_uuid: Optional[str], user_pro
     async with aiofiles.open(path, "rb") as f:
       f_content = await f.read()
       f_base64 = base64.b64encode(f_content).decode("utf-8")
+    file_fields = (
+        dict(mime_type='application/pdf', base64=f_base64)
+      if llm.__repr_name__() != 'ChatOpenAI' else
+        dict(file=dict(filename=Path(path).name, file_data=f'data:application/pdf;base64,{f_base64}'))
+    )
+
     content.append(
-      dict(
-        type='file',
-        file=dict(
-          filename=Path(path).name,
-          file_data=f'data:application/pdf;base64,{f_base64}',
-        )
-      )
+      _merge_dicts(file_fields, dict(type='file'))
     )
 
   msg = dict(role='user', content=content)
 
   # llm = runtime.context.llm
-  llm = runtime.context.get_llm('ocr')
   schema = runtime.context.get_parsing_schema(schema_uuid) # pyright: ignore[reportCallIssue]
   llm_structured = llm.with_structured_output(schema, include_raw=True, strict=True)
 
@@ -104,9 +121,18 @@ async def parse_pdfs(file_uuids: List[str], schema_uuid: Optional[str], user_pro
   response: dict = await llm_structured.ainvoke([msg])
   raw_msg = response['raw']
   parsed_msg = response['parsed']
+  if parsed_msg.__repr_name__() == 'SchemaUnion':
+    parsed_msg = parsed_msg.value
   res = (raw_msg.content, parsed_msg)
+  # _repr = ReprBuilder(parsed_msg)._repr_root()
+  # res = (_repr, parsed_msg)
   return res
 
+# @lang_tools.tool(description='Parses the ')
+# async def parse_schema(artifact_uuid: str, runtime: ToolRuntime[Ctx]):
+#   schema = runtime.context.parsing_schemas[artifact_uuid]
+#   _repr = ReprBuilder(schema)._repr_root()
+#   return _repr
 
 tools = [parse_pdfs] + Ctx.ctx_tools()
 

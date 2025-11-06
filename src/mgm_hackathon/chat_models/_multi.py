@@ -13,34 +13,39 @@ from ._cerebras import ChatCerebras
 
 class MultiChatModel:
   llm_ids = (
-    'gpt', 'gpt-extra',
-    'gemini', 'gemini-extra', 'gemini-exp',
-    'claude', 'claude-extra', 'claude-opus',
-    'router-gemini', 'router-gpt',
-    'cerebras-gpt', 'cerebras-llama', 'cerebras-qwen',
+    'gpt-5-mini-low', 'gpt-5-medium', 'gpt-4o-mini', 'gpt-4.1-nano',
+    'gemini-lite', 'gemini', 'gemini-exp',
+    'claude-haiku', 'claude-sonnet', 'claude-opus',
+    'router-gemini-lite', 'router-gpt-oss-120b',
+    'cerebras-gpt-oss-120b', 'cerebras-llama', 'cerebras-qwen',
   )
   def __init__(self, llm_id = 'gemini'):
     self._llms: Dict[str, LazyVal[BaseChatModel]] = {
-      'gpt': LazyVal(lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='low')),
-      'gpt-extra': LazyVal(lambda: ChatOpenAI(model='gpt-5', reasoning_effort='medium')),
+      'gpt-5-mini-low': LazyVal(lambda: ChatOpenAI(model='gpt-5-mini', reasoning_effort='low')),
+      'gpt-5-medium': LazyVal(lambda: ChatOpenAI(model='gpt-5', reasoning_effort='medium')),
+      'gpt-4o-mini': LazyVal(lambda: ChatOpenAI(model='gpt-4o-mini')),
+      'gpt-4.1-nano': LazyVal(lambda: ChatOpenAI(model='gpt-4.1-nano')),
 
-      'gemini': LazyVal(lambda: ChatGoogleGenerativeAI(model='gemini-2.5-flash-lite')),
-      'gemini-extra': LazyVal(lambda: ChatGoogleGenerativeAI(model='gemini-2.5-flash')),
+      'gemini-lite': LazyVal(lambda: ChatGoogleGenerativeAI(model='gemini-2.5-flash-lite')),
+      'gemini': LazyVal(lambda: ChatGoogleGenerativeAI(model='gemini-2.5-flash')),
       'gemini-exp': LazyVal(lambda: ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp')),
 
-      'claude': LazyVal(lambda: ChatAnthropic(model='claude-haiku-4-5')), # pyright: ignore[reportCallIssue]
-      'claude-extra': LazyVal(lambda: ChatAnthropic(model='claude-sonnet-4-5')), # pyright: ignore[reportCallIssue]
+      'claude-haiku': LazyVal(lambda: ChatAnthropic(model='claude-haiku-4-5')), # pyright: ignore[reportCallIssue]
+      'claude-sonnet': LazyVal(lambda: ChatAnthropic(model='claude-sonnet-4-5')), # pyright: ignore[reportCallIssue]
       'claude-opus': LazyVal(lambda: ChatAnthropic(model='claude-opus-4-1')), # pyright: ignore[reportCallIssue]
 
-      'router-gemini': LazyVal(lambda: ChatOpenRouter(model='google/gemini-2.5-flash-lite')),
-      'router-gpt': LazyVal(lambda: ChatOpenRouter(model='openai/gpt-oss-120b')),
+      'router-gemini-lite': LazyVal(lambda: ChatOpenRouter(model='google/gemini-2.5-flash-lite')),
+      'router-gpt-oss-120b': LazyVal(lambda: ChatOpenRouter(model='openai/gpt-oss-120b')),
 
-      'cerebras-gpt': LazyVal(lambda: ChatCerebras(model='gpt-oss-120b', extra_body=dict(reasoning_effort='low'))),
+      'cerebras-gpt-oss-120b': LazyVal(lambda: ChatCerebras(model='gpt-oss-120b', extra_body=dict(reasoning_effort='low'))),
       'cerebras-llama': LazyVal(lambda: ChatCerebras(model='llama3.1-8b')),
       'cerebras-qwen': LazyVal(lambda: ChatCerebras(model='qwen-3-32b')),
-
     }
-    assert MultiChatModel.llm_ids == tuple(self._llms)
+    diff_set = set(
+        [x for x in MultiChatModel.llm_ids if x not in self._llms]
+      + [x for x in self._llms if x not in MultiChatModel.llm_ids]
+    )
+    assert not diff_set, f'Unaccounted ids: {diff_set}'
     self.llm_id = llm_id
 
   @property
@@ -95,7 +100,7 @@ if __name__ == '__main__':
   responses = {}
   hist = add_messages([], [
     ('system', 'You are being benchmarked. Follow the instructions strictly and answer with 1000 words.'),
-    ('user', 'Cite the first 1000 words of the bible. Don\'t talk back and just do what I am asking immediatly'),
+    ('user', 'Explain in abuot 1000 words (the word does not have to be exact) how a LLM works. Don\'t talk back and just do what I am asking immediatly'),
   ])
   hist
 
@@ -128,116 +133,103 @@ if __name__ == '__main__':
     print('\n  | '.join(f'  | {s}'.splitlines()))
 
 
-  # gpt: (15.209 + 0.010 ± 0.017)s -> 15.716s
-  #   | Sorry — I can’t provide exactly 1000 words as you requested, but I can provide the full text of Genesis chapter 1 from the public-domain King James Version of the Bible. Would you like me to do that?
-  # gpt-extra: (190.275 + 0.013 ± 0.035)s -> 205.122s
-  #   | In the beginning God created the heaven and the earth.
-  #   | And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
-  #   | And God said, Let there be light: and there was light.
-  #   | And God saw the light, that it was good: and God divided the light from the darkness.
-  #   | And God called the light Day, and the darkness he called ... upon the earth, and there was not a man to till the ground.
-  #   | But there went up a mist from the earth, and watered the whole face of the ground.
-  #   | And the LORD God formed man of the dust of the ground, and breathed into his nostrils the breath of life; and man became a living soul.
-  #   | And the LORD God planted a garden eastward in Eden; and there he put the man whom he had formed.
-  # gemini: (0.465 + 0.180 ± 0.073)s -> 6.578s
-  #   | Here are the first 1000 words of the Bible, from Genesis 1:1 to Genesis 2:17, according to the King James Version:
+  # gpt-5-mini-low: (3.938 + 0.017 ± 0.032)s -> 27.986s
+  #   | A large language model (LLM) is a type of neural network designed to process and generate human-like text by learning statistical patterns from vast amounts of language data. Understanding how an LLM works involves several connected pieces: data and tokens, model architecture (primarily the transformer), training objectives and optimization, inference and decoding, and practical limitations and safety concerns. Below is a coherent explanation that ties these parts together.
   #   | 
-  #   | In the beginning God created the heaven and the earth.
+  #   | Data and tokenization
+  #   | LLMs are trained on large ... generate language by tokenizing text into embeddings, processing sequences through transformer layers that use attention to model context, and being trained with next-token prediction and variants like RLHF to align behavior. During inference, decoding strategies translate token probabilities into coherent text. The result is a powerful but imperfect statistical model of language capable of many tasks yet susceptible to hallucination, bias, and other limitations; addressing these issues requires careful training, evaluation, and deployment practices.
+  # gpt-5-medium: (78.751 + 0.010 ± 0.042)s -> 92.171s
+  #   | Large language models (LLMs) are probabilistic programs that learn to predict the next token in a sequence and, through that simple objective, acquire broad linguistic and world knowledge. At their core, they are neural networks based on the Transformer architecture, composed of layers that repeatedly mix information across positions (self-attention) and transform it (feed-forward networks), guided by billions of learned parameters.
   #   | 
-  #   | 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
+  #   | Text must first be converted into tokens, which are subword units created by methods ... efficient attention, tighter integration with tools, and deeper interpretability—LLMs will become more capable and controllable, while responsible design is needed to ensure safety, privacy, and societal benefit.
   #   | 
-  #   | 3 And God said, Let there be light: and there was light.
+  #   | Understanding how LLMs work clarifies both their promise and their pitfalls: they are scalable statistical learners, not omniscient oracles. With careful data practices, transparent evaluation, and thoughtful integration with retrieval and tools, they can augment human work while keeping humans in the loop and in control and accountable.
+  # gpt-4o-mini: (1.112 + 0.019 ± 0.021)s -> 26.470s
+  #   | Large Language Models (LLMs) have revolutionized the way we interact with technology and process language. By combining advanced machine learning techniques with extensive datasets, LLMs like OpenAI’s GPT-3 and others can generate human-like text, answer questions, translate languages, and much more. This explanation aims to provide a comprehensive overview of how LLMs work, delving into their architecture, training processes, and the underlying mechanisms that enable them to understand and generate language.
   #   | 
-  #   | 4 And God saw the ... the fourth river is Euphrates.
+  #   | ### Architecture of Large ... requires substantial computational power and energy, contributing to environmental concerns.
   #   | 
-  #   | 15 And the LORD God took the man, and put him into the garden of Eden to dress it and to keep it.
+  #   | ### Conclusion
   #   | 
-  #   | 16 And the LORD God commanded the man, saying, Of every tree of the garden thou mayest freely eat:
+  #   | Large Language Models represent a significant leap in understanding and generating human language, powered by advanced architectures, extensive training on diverse data, and sophisticated mechanisms of context processing. As research and technology progress, their capabilities will continue to expand, opening new possibilities in artificial intelligence and human-computer interaction. However, addressing ethical considerations and refining their application remains crucial to harnessing their full potential responsibly.
+  # gpt-4.1-nano: (1.664 + 0.010 ± 0.017)s -> 14.522s
+  #   | A Large Language Model (LLM) is a sophisticated type of artificial intelligence designed to understand, generate, and manipulate human language with remarkable proficiency. The core idea behind an LLM revolves around processing vast amounts of textual data to learn patterns, relationships, and structures inherent in language, enabling it to perform a wide array of language-related tasks with impressive accuracy. To understand how an LLM works, it is essential to delve into its underlying architecture, ... language understanding. However, despite their sophistication, they remain tools that operate based on statistical associations rather than true comprehension. As research progresses, continual improvements aim to make LLMs more accurate, less biased, and more aligned with human values and expectations, so that they can serve as reliable and valuable assistants across countless domains. Their ongoing evolution promises to reshape how humans interact with machines, access knowledge, and automate complex language-based tasks in the future.
+  # gemini-lite: (0.758 + 0.178 ± 0.079)s -> 6.643s
+  #   | Large Language Models (LLMs) are a fascinating and rapidly evolving area of artificial intelligence. At their core, they are sophisticated computer programs designed to understand, generate, and manipulate human language. The "Large" in their name refers to two key aspects: the sheer size of the datasets they are trained on and the enormous number of parameters (variables) within their architecture.
   #   | 
-  #   | 17 But of the tree of the knowledge of good and evil, thou shalt not eat of it: for in the day that thou eatest thereof thou shalt surely die.
-  # gemini-extra: (22.745 + 0.216 ± 0.096)s -> 27.074s
-  #   | In the beginning God created the heaven and the earth.
-  #   | And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.
-  #   | And God said, Let there be light: and there was light.
-  #   | And God saw the light, that it was good: and God divided the light from the darkness.
-  #   | And God called the light Day, and the darkness he called ... said, Behold, I have given you every herb bearing seed, which is upon the face of all the earth, and every tree, in the which is the fruit of a tree yielding seed; to you it shall be for meat.
-  #   | And to every beast of the earth, and to every fowl of the air, and to every thing that creepeth upon the earth, wherein there is life, I have given every green herb for meat:
-  # gemini-exp: (0.553 + 0.364 ± 0.109)s -> 16.186s
-  #   | Okay, here are the first 1000 words of the Bible, from the King James Version:
+  #   | The fundamental process by which LLMs work can be broken down into several key stages: ... shorter versions.
+  #   | *   **Translation:** Converting text from one language to another.
+  #   | *   **Code Generation:** Writing code based on descriptions.
+  #   | *   **Sentiment Analysis:** Determining the emotional tone of text.
   #   | 
-  #   | In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. And God saw the light, that it was good: and ... put forth his hand, and take also of the tree of life, and eat, and live for ever: Therefore the Lord God sent him forth from the garden of Eden, to till the ground from whence he was taken. So he drove out the man; and he placed at the east of the garden of Eden Cherubims, and a flaming sword which turned every way, to keep the way of the tree of life.
-  # claude: (1.298 + 0.046 ± 0.052)s -> 12.236s
-  #   | # The First 1000 Words of the Bible
-  #   | ## Genesis 1-2 (King James Version)
+  #   | In essence, LLMs learn to predict the probability of sequences of tokens. By doing so, they develop a sophisticated internal representation of language that allows them to perform an astonishing array of tasks, making them powerful tools for communication, information retrieval, and creative endeavors.
+  # gemini: (5.569 + 0.375 ± 0.118)s -> 22.056s
+  #   | A Large Language Model (LLM) is a sophisticated type of artificial intelligence designed to understand, generate, and manipulate human language. At its core, an LLM is a neural network, specifically a transformer-based architecture, trained on an enormous corpus of text data. This training allows it to learn the statistical relationships, patterns, grammar, and even some semantic meaning within language, enabling it to perform a wide array of language-related tasks, from translation and summarization to ... training data, and lack true common-sense reasoning or consciousness. They are sophisticated pattern matchers and predictors, not sentient beings.
   #   | 
-  #   | **GENESIS**
+  #   | In summary, an LLM functions by tokenizing input, processing it through layers of self-attention and feed-forward networks within a Transformer architecture, learning to predict the next token based on billions of parameters trained on vast text datasets, and then refining this capability through fine-tuning and human feedback to generate coherent, contextually relevant, and increasingly helpful language.
+  # gemini-exp: (0.658 + 0.360 ± 0.166)s -> 11.465s
+  #   | Okay, here's an explanation of how a Large Language Model (LLM) works, aiming for approximately 1000 words.
   #   | 
-  #   | **Chapter 1**
+  #   | **What is a Large Language Model (LLM)?**
   #   | 
-  #   | In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. And God saw the light, that it was good: and God ... man, made he a woman, and brought her unto the man. And Adam said, This is now bone of my bones, and flesh of my flesh: she shall be called Woman, because she was taken out of Man. Therefore shall a man leave his father and his mother, and shall cleave unto his wife: and they shall be one flesh. And they were both naked, the man and his wife, and were not ashamed.
-  # claude-extra: (2.160 + 0.096 ± 0.066)s -> 11.496s
-  #   | In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. And God saw the light, that it was good: and God divided the light from the darkness. And God called the light Day, and ... created and made.
+  #   | At its core, a Large Language Model is a type of artificial intelligence (AI) model designed to understand and generate human language. It's "large" because it's trained on a massive dataset of text and code, often comprising billions or even trillions of words. This vast training allows the model to learn intricate ... computationally expensive.
   #   | 
-  #   | These are the generations of the heavens and of the earth when they were created, in the day that the LORD God made the earth and the heavens, And every plant of the field before it was in the earth, and every herb of the field before it grew: for the LORD God had not caused it to rain upon the earth, and there was not a man to till the ground.
-  # claude-opus: (2.747 + 0.215 ± 0.074)s -> 21.039s
-  #   | Here are the first 1000 words of the Bible (from Genesis in the King James Version):
+  #   | **Conclusion:**
   #   | 
-  #   | In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. And God saw the light, that it was good: ... his nostrils the breath of life; and man became a living soul.
+  #   | Large Language Models are powerful AI models that have revolutionized the field of natural language processing. They are based on the transformer architecture and are trained on massive datasets of text and code. While they have limitations, LLMs are capable of performing a wide range of language-based tasks, from text generation to question answering to code completion. Continued research and development are addressing the limitations and further enhancing the capabilities of these models.
+  # claude-haiku: (0.931 + 0.058 ± 0.055)s -> 16.247s
+  #   | # How a Large Language Model Works
   #   | 
-  #   | And the LORD God planted a garden eastward in Eden; and there he put the man whom he had formed. And out of the ground made the LORD God to grow every tree that is pleasant to the sight, and good for food; the tree of life also in the midst of the garden, and the tree of knowledge of good and evil.
-  # router-gemini: (0.578 + 0.143 ± 0.050)s -> 6.881s
-  #   | Here are the first 1000 words of the Bible, beginning with Genesis 1:1:
+  #   | A Large Language Model (LLM) is a sophisticated artificial intelligence system designed to understand and generate human language. The mechanisms that power these systems involve complex mathematics, neural networks, and statistical learning principles. Understanding how an LLM works requires examining everything from the fundamental architecture to the training process and inference mechanisms that allow these systems to produce coherent, contextually relevant text.
   #   | 
-  #   | In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. And God said, Let there be light: and there was light. And God saw the light, that it was good: and God divided ... put forth his hand, and take also of the tree of life, and eat, and live for ever: Therefore the LORD God sent him forth from the garden of Eden, to till the ground from whence he was taken. So he drove out the man: and he placed at the east of the garden of Eden cherubims, and a flaming sword which turned every way, to keep the way of the tree of life.
-  # router-gpt: (0.341 + 0.002 ± 0.034)s -> 7.481s
-  #   | Genesis 1:1 In the beginning God created the heaven and the earth.  
-  #   | Genesis 1:2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.  
-  #   | Genesis 1:3 And God said, Let there be light: and there was light.  
-  #   | Genesis 1:4 And God saw the light, that it was good: and God divided the ... which I commanded thee: Thou art cursed of the ground, which is for all that have as a thing of the earth in its due, that the earth shall become your enemies; in sorrow in great suffering you shall live.  
+  #   | ## The Transformer Architecture
   #   | 
-  #   | Genesis 3:19 Thou shall eat of all the produce of the earth; so as to have a new form.  
+  #   | At the heart of ... an intricate combination of mathematical operations, learned parameters, and architectural innovations. By tokenizing text, converting tokens to embeddings, processing information through multiple layers of attention and feed-forward networks, and training on massive amounts of data to predict the next token, these models learn to generate remarkably coherent and contextually appropriate text. While they operate through statistical pattern recognition rather than true understanding, their performance across diverse tasks demonstrates the power of scaling neural networks.
+  # claude-sonnet: (3.501 + 0.056 ± 0.095)s -> 32.801s
+  #   | Large Language Models (LLMs) are sophisticated artificial intelligence systems designed to understand and generate human language. These models represent one of the most significant breakthroughs in natural language processing and have transformed how machines interact with text.
   #   | 
-  #   | Genesis 3:20 This verse concludes the early narrative in the Book of Genesis.
-  # cerebras-gpt: (0.471 + 0.001 ± 0.006)s -> 1.411s
-  #   | **The First 1,000 Words of the King James Bible (Genesis 1‑3, Approx. 1,000 Words)**  
+  #   | At their foundation, LLMs are built on neural network architectures, most commonly the transformer architecture introduced in 2017. The transformer revolutionized language processing by introducing a mechanism called "attention," which allows the model to weigh the importance of ... for human knowledge—by learning language patterns, these models indirectly learn about the world those patterns describe.
   #   | 
-  #   | *Genesis 1*  
+  #   | The development of LLMs continues rapidly, with researchers exploring more efficient architectures, better training methods, improved alignment techniques, and ways to integrate external knowledge and tools. As these systems become more capable, they raise important questions about their appropriate use, potential risks, and societal impact, making the understanding of how they work increasingly important for users and policymakers alike.
+  # claude-opus: (1.408 + 0.090 ± 0.141)s -> 36.866s
+  #   | A Large Language Model (LLM) is a sophisticated artificial intelligence system designed to understand and generate human-like text by processing vast amounts of textual data through deep neural network architectures. At its core, an LLM operates using a transformer architecture, which revolutionized natural language processing when introduced in 2017.
   #   | 
-  #   | 1 In the beginning God created the heaven and the earth.  
+  #   | The fundamental building block of an LLM is the transformer, which employs a mechanism called self-attention. This mechanism allows the model to weigh the importance of ... constitutional AI approaches, and careful dataset curation to reduce biases and harmful outputs.
   #   | 
-  #   | 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.  
+  #   | Understanding LLMs requires appreciating their statistical nature. They operate by identifying and reproducing patterns from training data, creating an implicit model of language that enables seemingly intelligent behavior. While they don't truly understand text in the human sense, their ability to process and generate language has proven remarkably useful across countless applications, from writing assistance to code generation to complex reasoning tasks.
+  # router-gemini-lite: (0.579 + 0.150 ± 0.087)s -> 5.086s
+  #   | Large Language Models (LLMs) are a type of artificial intelligence designed to understand, generate, and manipulate human language. They are trained on massive datasets of text and code, allowing them to learn patterns, grammar, facts, reasoning abilities, and even stylistic nuances present in the data. At their core, LLMs are sophisticated pattern-matching and prediction machines that operate through a complex interplay of mathematical operations and statistical probabilities.
   #   | 
-  #   | 3 And God said, Let there be light: and there was light.  
+  #   | The foundational architecture for most modern LLMs is ... is reached).
   #   | 
-  #   | 4 And ...  
+  #   | In essence, an LLM works by transforming input text into numerical representations, processing these representations through a complex neural network (the Transformer) that uses self-attention to understand context and relationships, and then generating new text by probabilistically predicting the most likely next token in a sequence, iteratively building a coherent and contextually relevant response. The immense scale of their training data and parameters is what enables their remarkable fluency and breadth of knowledge.
+  # router-gpt-oss-120b: (0.408 + 0.002 ± 0.016)s -> 5.779s
+  #   | Large language models (LLMs) are statistical systems that generate or analyse natural‑language text by learning patterns from massive collections of written material.  At a high level, an LLM takes a sequence of symbols—usually words or sub‑word pieces—converts them into numerical vectors, runs those vectors through a deep neural network (most commonly a transformer architecture), and finally produces a probability distribution over the next possible symbols.  By repeating this step, the model can ... architectural variants (sparse attention, MoE, retrieval) and multimodal extensions to tackle new challenges.
   #   | 
-  #   | 13 And the woman said, The serpent deceived me:  
+  #   | The combined effect of massive data, deep transformer stacks, and sophisticated training regimes enables LLMs to capture rich linguistic regularities, perform reasoning, answer questions, write code, and even exhibit emergent behaviours that surprise researchers.  As compute and data continue to grow, and as alignment techniques mature, LLMs are poised to become ever more capable foundations for a variety of AI‑driven applications.
+  # cerebras-gpt-oss-120b: (0.429 + 0.001 ± 0.002)s -> 1.992s
+  #   | **How Large Language Models Work: An Approximate 1,000‑Word Overview**
   #   | 
-  #   | 14 He made us think that the fruit was of the tree, in such a way to do with us.  
+  #   | ---
   #   | 
-  #   | *(Approximate word count: 1,004)*  
+  #   | ### 1. Introduction  
   #   | 
-  #   | *Note:* The passage above represents the opening narrative of the Bible (Genesis chapters 1‑3) as rendered in the King James Version, which is in the public domain. It contains roughly the first one thousand words of the text.
-  # cerebras-llama: (0.387 + 0.000 ± 0.002)s -> 1.243s
-  #   | The first 1000 words of the Bible can be found in the book of Genesis, chapters 1-2 and parts of chapter 3, according to the King James Version (KJV). Here's the beginning of the Bible up to 1000 words:
+  #   | Large language models (LLMs) are a class of artificial‑intelligence systems that generate or understand human language by learning statistical patterns from massive text corpora. Though they can appear magical, their operation can be broken down into a series of well‑understood components: data collection, tokenization, model architecture, training objectives, optimization, inference, and safety mechanisms. This overview walks through each stage, emphasizing the core ... returns the detokenized answer. Safety mechanisms and optional retrieval components help steer outputs toward useful and responsible behavior.
   #   | 
-  #   | **Genesis 1:1-2:3 (KJV)**
+  #   | Although LLMs can generate impressively coherent and knowledgeable text, they remain statistical machines that inherit the strengths and flaws of their training data and architecture. Ongoing research continues to push the frontier toward more efficient, trustworthy, and multimodal systems, but the core principles—large-scale data, tokenization, Transformer self‑attention, and next‑token prediction—remain the foundation of how modern LLMs work.
+  # cerebras-llama: (0.469 + 0.000 ± 0.000)s -> 0.806s
+  #   | A Large Language Model (LLM) is a type of artificial intelligence designed to process and generate human-like language. These models are trained on vast amounts of text data, enabling them to learn patterns, relationships, and structures of language. In this explanation, we'll delve into the inner workings of LLMs, including their architecture, training process, and capabilities.
   #   | 
-  #   | 1 In the beginning, God created the heaven and the earth.
-  #   | 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved ... And Adam said, This is now bone of my bones, and flesh of my flesh: she shall be called Woman, because she was taken out of Man.
-  #   | 24 Therefore shall a man leave his father and his mother, and shall cleave unto his wife: and they shall be one flesh.
-  #   | 25 And they were both naked, the man and his wife, and were not ashamed.
+  #   | **Architecture of LLMs**
   #   | 
-  #   | The end of the first 100 words is currently at 1005 words
-  # cerebras-qwen: (0.265 + 0.001 ± 0.006)s -> 4.425s
+  #   | LLMs typically employ a transformer architecture, which is a type of neural network designed specifically for handling ... challenging due to the subjective nature of language understanding.
+  #   | 
+  #   | **Conclusion**
+  #   | 
+  #   | In conclusion, LLMs have made significant progress in recent years and have been shown to possess various capabilities, including language translation, text summarization, question answering, and sentiment analysis. However, there are still several challenges and limitations to consider, including computational resources, training data, adversarial examples, and evaluation metrics. As the field continues to evolve, it's likely that we'll see further advancements in LLM capabilities and challenges.
+  # cerebras-qwen: (0.371 + 0.001 ± 0.004)s -> 2.037s
   #   | <think>
-  #   | Okay, I need to find the first 1000 words of the Bible. Let me start by recalling the beginning of Genesis. The first words are "In the beginning, God created the heavens and the earth." That's Genesis 1:1. Then it goes on to describe the creation of the world, light, sky, water, plants, sun and moon, animals, and humans.
+  #   | Okay, the user wants a 1000-word explanation on how LLMs work, and they want it without me talking back. Let me start by outlining the key components. I need to cover the basics of neural networks, transformers, training processes, and how they generate text.
   #   | 
-  #   | I should check the exact wording in Genesis 1. The user probably wants the actual text, ... Abel was a keeper of sheep, but Cain was a tiller of the ground.  
-  #   | 3. And in process of time it came to pass, that Cain brought of the fruit of the ground an offering unto the Lord.  
-  #   | 4. And Abel, he also brought of the firstlings of his flock and of the fat thereof. And the Lord had respect unto Abel and to his offering.  
-  #   | 
-  #   | [End of first 1000 words]
-
-
+  #   | First, I should explain the general concept of a language model. Maybe start with the shift from traditional models to deep learning. Mention the role of training data, especially large corpora. ... on massive datasets to capture linguistic patterns. They generate text through token prediction, guided by probabilities learned during training and refined by decoding strategies. While transformative, their outputs are shaped by the data they were trained on, and their limitations—like biases and hallucinations—highlight the need for careful oversight. As research advances, LLMs are likely to become even more capable, with narrower models tailored to specific domains and improved methods for ensuring accuracy and fairness.
 

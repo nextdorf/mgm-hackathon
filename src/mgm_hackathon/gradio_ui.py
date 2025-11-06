@@ -3,7 +3,6 @@ import dotenv
 import uuid
 import json
 from pathlib import Path
-import asyncio
 
 from dataclasses import dataclass
 from langchain_core.messages import AIMessage, AnyMessage
@@ -15,8 +14,9 @@ dotenv.load_dotenv()
 
 from .util import temp_async_json_dump
 from .agent import Ctx
-# from .refiner import refiner as agent
-from .agent import agent
+from .refiner import refiner as agent
+from .schemas import ReprBuilder
+# from .agent import agent
 # from .util import multistrip
 
 
@@ -48,7 +48,7 @@ def gen_user_message(base_msg: Optional[str], uploaded_pdfs: List[str]):
     ))
 
     tagged_content.append((
-      'soft requirement:', 'Unless otherwise specified by the user the content of the pdf(s) should be presented with markdown syntax. When applicable, preferably use tables for presenting several entries.'
+      'soft requirement:', 'Unless otherwise specified by the user the content of the pdf(s) should be presented in a markdown+extension syntax. If a tool explicitly mentions that the output is formatted in markdown+extension syntax then aim to respect the returned format. If the text is colored it is a visual representation of the confidence level wherein green signals high confidence, yellow signals unclear confidence, and red signals low/no confidence.'
     ))
   if base_msg:
     tagged_content.append(('original user prompt', base_msg))
@@ -58,11 +58,11 @@ def gen_user_message(base_msg: Optional[str], uploaded_pdfs: List[str]):
   res += '\n\n\n\n'.join((f'[{head.upper()}]\n{body}' for head, body in tagged_content))
   return res
 
-def process_multimodal_message(in_msg, _history, ctx: FullCtx):
+async def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   msg = in_msg.get('text')
   files = in_msg.get('files')
   if not msg and not files:
-    return 'Please provide a message or upload a file.', ctx
+    return 'Please provide a message or upload a file.', ctx, []
   
   new_file_uuids = []
   # Add uploaded files to persistent context
@@ -77,39 +77,51 @@ def process_multimodal_message(in_msg, _history, ctx: FullCtx):
   user_message = gen_user_message(msg, new_file_uuids)
   
   # Use the agent with persistent context
-  # response = await agent.ainvoke( # pylint: disable=no-member
-  #   dict(messages=ctx.update_chat_hist([('human', user_message)])),
-  #   context=ctx.agent_ctx
-  # )
-  response_chunks = agent.stream( # pylint: disable=no-member
+  response = await agent.ainvoke( # pylint: disable=no-member
     dict(messages=ctx.update_chat_hist([('human', user_message)])),
     context=ctx.agent_ctx
   )
-  chunks = []
-  for ch in response_chunks:
-    chunks.append(ch['model'])
-    # print(ch)
-    yield chunks[-1]['messages'][-1].content, ctx, []
+
+  # The Langchain agent does not handle streaming tool calls correctly
+  # response_chunks = agent.stream( # pylint: disable=no-member
+  #   dict(messages=ctx.update_chat_hist([('human', user_message)])),
+  #   context=ctx.agent_ctx
+  # )
+  # chunks = []
+  # for ch in response_chunks:
+  #   chunks.append(ch['model'])
+  #   # print(ch)
+  #   yield chunks[-1]['messages'][-1].content, ctx, []
 
 
-  # agent_dialog = response['messages']
-  # print(json.dumps([m.model_dump() for m in agent_dialog], indent=2))
-  # final_response = next((m for m in agent_dialog[::-1] if isinstance(m, AIMessage)), '')
-  # artifacts = [x for x in (getattr(m, 'artifact', None) for m in agent_dialog) if x is not None]
+  agent_dialog = response['messages']
+  ctx.update_chat_hist(agent_dialog)
+  print(json.dumps([m.model_dump() for m in agent_dialog], indent=2))
+  final_response = next((m for m in agent_dialog[::-1] if isinstance(m, AIMessage)), '')
+  artifacts = [x for x in (getattr(m, 'artifact', None) for m in agent_dialog) if x is not None]
   
 
-  # saved_paths = []
-  # for art in artifacts:
-  #   p = asyncio.run(temp_async_json_dump(art.model_dump()))
-  #   saved_paths.append(str(p))
+  full_response = []
+  # print('ä')
+  saved_paths = []
+  for art in artifacts:
+    # p = asyncio.run(temp_async_json_dump(art.model_dump()))
+    p = await temp_async_json_dump(art.model_dump())
+    saved_paths.append(str(p))
+    try:
+      art_fmt = ReprBuilder(art)._repr_root()
+    except:
+      art_fmt = 'New artifact (No formatted representation)!'
+    full_response.append(art_fmt)
 
-  # # Store artifacts in context for UI display
-  # # ctx.agent_ctx.artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
-  # # ctx.agent_ctx.artifacts.extend(artifacts)
+  # Store artifacts in context for UI display
+  # ctx.agent_ctx.artifacts = getattr(ctx.agent_ctx, 'artifacts', [])
+  # ctx.agent_ctx.artifacts.extend(artifacts)
 
-  # # TODO: what about the artifacts?
+  # TODO: what about the artifacts?
 
-  # return final_response.content, ctx, saved_paths
+  full_response.append(final_response.content)
+  return '\n\n\n'.join(full_response), ctx, saved_paths
     
   # # except Exception as e:
   # #   return f'Error: {str(e)}', ctx
@@ -129,6 +141,13 @@ Whenever possible, aim to give short but informative and relevant answers (1-2 s
 
 
 The User input which directly comes from the chat will be marked by the first line being "{leading_user_input_mark}". These types of messages usually contain tags of the form "[...]" followed by the body associated with the tag. It may be used to inject metadata for the respective user prompt.
+
+
+The "Markdown+Extension" syntax comprises:
+- SmartyPants: Converts ASCII punctuation characters into "smart" typographic punctuation HTML entities
+- KaTeX: Can render LaTeX mathematical expressions using dollar-signs
+- UML via Mermaid: UML diagrams can rendered using Mermaid. For example, a sequence diagram can be produced via  ```mermaid\\n sequenceDiagram ...``` and a flow chart can be produced via ```mermaid\\n graph LR ...```
+- HTML: A subset of HTML is supported including tables
 '''.strip()
 ctx_state = gr.State(FullCtx(Ctx(), [('system', system_prompt)]))
 

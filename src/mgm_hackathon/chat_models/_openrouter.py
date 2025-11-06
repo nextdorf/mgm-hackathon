@@ -10,11 +10,6 @@ from ..util import _merge_dicts
 
 # See https://openrouter.ai/request-builder
 
-def _merge_dicts(src: dict, dst: dict):
-  for k, v in src.items():
-    dst[k] = _merge_dicts(v, dst.get(k, {})) if isinstance(v, dict) else v
-  return dst
-
 class ChatOpenRouter(ChatOpenAI):
   def __init__(self, *, model='google/gemini-2.5-flash-lite', **kwargs):
     default_kwargs = dict(
@@ -28,7 +23,7 @@ class ChatOpenRouter(ChatOpenAI):
         order='cerebras baseten/fp4 groq google-vertex'.split()
       )),
     )
-    _merge_dicts(default_kwargs, kwargs)
+    kwargs = _merge_dicts(kwargs, default_kwargs)
     if hasattr(kwargs['api_key'], '__call__'):
       kwargs['api_key'] = kwargs['api_key']()
 

@@ -16,6 +16,12 @@ dependencies = [
   "nest-asyncio>=1.6.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.3",
+  "pytest-asyncio>=0.23.8",
+]
+
 [project.scripts]
 mgm-hackathon = "mgm_hackathon:main"
 

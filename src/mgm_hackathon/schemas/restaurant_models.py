@@ -2,26 +2,25 @@
 #   filename:  schema.json
 #   timestamp: 2025-10-25T08:50:19+00:00
 
-from __future__ import annotations
 
-from datetime import date as date_aliased
-from typing import List, Optional
-
-from pydantic import BaseModel, Extra, Field
+# from datetime import date as date_aliased
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field
+from ._types import Confidence, Datetime
 
 
 class Item(BaseModel):
-  name: Optional[str] = Field(None, description='The name of the ordered item')
-  quantity: Optional[int] = Field(
-    None, description='The quantity of the item ordered'
-  )
-  price: Optional[float] = Field(None, description='The price of the item in euros')
+  name: str = Field(description='The name of the ordered item')
+  quantity: int = Field(1, description='The quantity of the item ordered')
+  price: float = Field(description='The price of the item')
+  currency: str = Field(description='Currency of `price`.')
+  confidence: Confidence
 
 
 class RestaurantModel(BaseModel):
   # class Config:
   #   extra = Extra.allow
-
+  kind: Literal['restaurant', 'cafe']
   restaurant_name: Optional[str] = Field(
     None, description='The name of the restaurant'
   )
@@ -34,26 +33,23 @@ class RestaurantModel(BaseModel):
   invoice_number: Optional[str] = Field(
     None, description='The unique identifier for the invoice'
   )
-  date: Optional[date_aliased] = Field(None, description='The date of the invoice')
+  date: Optional[Datetime] = Field(None, description='The date of the invoice')
   table_number: Optional[int] = Field(
     None, description='The table number for the order'
   )
-  items: Optional[List[Item]] = Field(None, description='List of items ordered')
-  total_amount: Optional[float] = Field(
-    None, description='The total amount of the bill in euros'
-  )
+  items: List[Item] = Field(description='List of items ordered', default_factory=list)
+  total_amount: float = Field(description='The total amount of the bill')
   net_amount: Optional[float] = Field(
-    None, description='The net amount of the bill in euros'
+    None, description='The net amount of the bill'
   )
-  vat_amount: Optional[float] = Field(None, description='The VAT amount in euros')
+  vat_amount: Optional[float] = Field(None, description='The VAT amount')
   vat_rate: Optional[float] = Field(None, description='The VAT rate as a percentage')
+  currency: str = Field(description='Currency of `total_amount`, `net_amount`, and `vat_amount`.')
   server: Optional[str] = Field(
     None, description='The identifier of the server who attended the table'
   )
   tax_id: Optional[str] = Field(
     None, description='The tax identification number of the restaurant'
   )
-  freetext: Optional[str] = Field(
-    None,
-    description='A free text comment. Add any other relevant information not part of the schema but important for the user here.',
-  )
+  confidence: Confidence
+  free_text: str = Field(description='A free text comment. Add any other relevant information not part of the schema but important for the user here.')
